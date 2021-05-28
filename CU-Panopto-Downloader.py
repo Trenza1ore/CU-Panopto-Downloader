@@ -1,3 +1,7 @@
+import sys
+from codecs import getwriter
+sys.stdout = getwriter("utf-8")(sys.stdout.detach())
+
 import logging
 import os
 import os.path
@@ -20,7 +24,7 @@ from tqdm import tqdm
 
 class PanoptoDownloader:
 
-    def __init__(self, username, password, update=True):
+    def __init__(self, username, password, update=False):
         self.username = username
         self.password = password
         self.update = update
@@ -53,7 +57,7 @@ class PanoptoDownloader:
     def check_dependencies(self):
 
         # Set the paths
-        bin_gecko = os.path.join(self.cwd, 'include', 'geckodriver')
+        bin_gecko = os.path.join(self.cwd, 'geckodriver')
 
         # Update names for windows
         if 'windows' in self.get_version():
@@ -78,11 +82,12 @@ class PanoptoDownloader:
 
         file_f = asset['browser_download_url']
 
-        # Making sure the directory actually exists
+        '''# Making sure the directory actually exists
         dir_name = os.path.join(self.cwd, "include")
         if not os.path.isdir(dir_name):
-            os.makedirs(dir_name)
+            os.makedirs(dir_name)'''
 
+        dir_name = self.cwd
         local_filename = file_f.split('/')[-1]
         write_loc = os.path.join(dir_name, local_filename)
 
@@ -106,7 +111,7 @@ class PanoptoDownloader:
     def launch_driver(self):
         self.logger.info("Launching geckodriver")
 
-        cd_path = os.path.join(self.cwd, 'include', 'geckodriver')
+        cd_path = os.path.join(self.cwd, 'geckodriver')
         if 'windows' in self.get_version():
             cd_path += '.exe'
 
@@ -214,7 +219,11 @@ class PanoptoDownloader:
         for item in resp_json['d']['Results']:
             results[item['SessionName']] = item['IosVideoUrl']
 
-        self.logger.debug("%d videos found", len(results))
+        # fix the m3u8 playlist issue
+        for i in results:
+            this_link = results[i]
+            if this_link[-4:].lower() == "m3u8":
+                results[i] = this_link[:-15] + "mp4"
 
         return results
 
@@ -241,6 +250,8 @@ class PanoptoDownloader:
             filters = ['Featured Videos - Panopto Homepage (Not open ''links)',
                        'Getting Started with Panopto']
             if item['Name'] in filters:
+                continue
+            if "math" not in item['Name'].lower() and "thinking" not in item['Name'].lower():
                 continue
 
             self.logger.info("Found module: %s", item['Name'])
@@ -282,11 +293,48 @@ class PanoptoDownloader:
 
         self.logger.info("Commencing downloads")
 
-        counter = 0
+        ## add a simple menu thingy
+        user_choice = ""
+        download_all = True
+
+        # download all?
+        while user_choice == "":
+            user_choice = input("Download all [y/n]: ").lower()
+            if user_choice == "y":
+                break
+            elif user_choice == "n":
+                download_all = False
+                break
+            else:
+                user_choice = ""
+        
+        # simple menu
+        if not download_all:
+            unwanted_folders = []
+
+            for folder, videos in folders.items():
+                print("\nFolder <%s>:\n- l: list videos\n- y: download\n- n: don\'t download" %(folder))
+                user_choice = ""
+                while user_choice == "":
+                    user_choice = input("(y/n/l) >> ").lower()
+                    if user_choice == "y":
+                        break
+                    elif user_choice == "n":
+                        unwanted_folders.append(folder)
+                        break
+                    elif user_choice == "l":
+                        for video_title in videos["videos"]:
+                            print("  - %s" %(video_title))
+                        user_choice = ""
+                    else:
+                        user_choice = ""
+            
+            # remove unwanted folders
+            for folder in unwanted_folders:
+                folders.pop(folder)
 
         with futures.ThreadPoolExecutor() as executor:
             future_threads = []
-
             for folder, videos in folders.items():
 
                 # Cardiff specific dumb file naming
@@ -324,13 +372,13 @@ class PanoptoDownloader:
         self.logger.info("%d videos downloaded", len(future_threads))
 
 
-def main():
+def main(creds = "creds.txt"):
     # Set up the logger
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("Script")
     logger.info("Starting script")
     
-    with open('creds.txt') as f_reader:
+    with open(creds, encoding="utf-8") as f_reader:
         username = f_reader.readline().strip('\n')
         password = f_reader.readline().strip('\n')
 
@@ -345,8 +393,35 @@ def main():
     except Exception:
         logger.exception("Unknown failure")
     finally:
+        print("\n\nDOWNLOADS COMPLETE\nDo you want to remove your login information stored?")
+        user_choice = ""
+        while user_choice == "":
+            user_choice = input("(y/n) >> ").lower()
+            if user_choice == "y":
+                try:
+                    os.remove("creds.txt")
+                except:
+                    pass
+                break
+            elif user_choice == "n":
+                break
+            else:
+                user_choice = ""
         client.quit()
 
 
 if __name__ == '__main__':
+    try:
+        file = open("creds.txt", encoding="utf-8")
+        file.close()
+    except:
+        not_confirmed = True
+        while not_confirmed:
+            user_name = input("username: ")
+            user_pass = input("password: ")
+            if input("Confirm [enter y]: ").lower() == 'y':
+                not_confirmed = False
+        file = open("creds.txt", 'w', encoding="utf-8")
+        file.write(user_name + "\n" + user_pass)
+        file.close()
     main()
