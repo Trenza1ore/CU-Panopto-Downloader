@@ -251,8 +251,6 @@ class PanoptoDownloader:
                        'Getting Started with Panopto']
             if item['Name'] in filters:
                 continue
-            if "math" not in item['Name'].lower() and "thinking" not in item['Name'].lower():
-                continue
 
             self.logger.info("Found module: %s", item['Name'])
 
