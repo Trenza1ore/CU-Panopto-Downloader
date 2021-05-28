@@ -3,7 +3,7 @@ Downloads Cardiff university lectures from panopto
 
 **Forked from https://github.com/TThomasV/CU-Panopto-Downloader, go check the original version out, I just added some minor changes.**
 
-*I ONLY added some ease-of-use improvements and an exe version for non CS students which only requires Firefox to be installed.*
+*I ONLY added some ease-of-use improvements, one bug fix and an exe version for non CS students which only requires Firefox to be installed.*
 
 
 
