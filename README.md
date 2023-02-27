@@ -12,10 +12,10 @@ Downloads Cardiff university lectures from panopto
 
 **Building it for Windows machines yourself?**
 - Create a new Python 3.6 virtual environment, you can use Anaconda if you hate troubles
+- Activate your virtual environment -> conda activate MY_VIRTUAL_ENVIRONMENT //if you are using Anaconda
 - Install cx_Freeze to your Python environment -> pip install cx_freeze
 - Install other requirements in requirements.txt -> pip install -r requirements.txt
 - Open your command line, move to the current folder -> cd C:\Users\YOURUSERNAME\Desktop\CU-Panopto-Downloader-master
-- Activate your virtual environment -> conda activate MY_VIRTUAL_ENVIRONMENT (Anaconda case)
 - Run the building command -> python setup.py build
 - Splendid, but you still need a FireFox Browser installed, remember it -> https://www.mozilla.org/en-GB/firefox/new/
 
