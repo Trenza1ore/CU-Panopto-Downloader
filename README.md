@@ -7,7 +7,8 @@ Downloads Cardiff university lectures from panopto
 
 - Need a Cardiff university account.
 - Only works on windows right now (will probably remain that way).
-- Works on Python 3.4 to 3.6, **WILL NOT WORK WITH HIGHER (from my testing)**
+- ~~Works on Python 3.4 to 3.6, **WILL NOT WORK WITH HIGHER (from my testing)**~~
+- Current version's tested with Python 3.9.13 + Selenium 4.8.2
 - Requires you have FireFox installed, you can easily change this to chrome.
 
 **Building it for Windows machines yourself?**
