@@ -19,6 +19,8 @@ from selenium.common.exceptions import InvalidSessionIdException, \
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.firefox.service import Service as firefox_service
+from webdriver_manager.firefox import GeckoDriverManager
 from tqdm import tqdm
 
 
@@ -118,7 +120,7 @@ class PanoptoDownloader:
         options = webdriver.FirefoxOptions()
         options.add_argument('--mute-audio')  # Mute audio
 
-        self.driver = webdriver.Firefox(executable_path=cd_path,
+        self.driver = webdriver.Firefox(service=firefox_service(cd_path),
                                         options=options)
 
         # Minimize the driver
@@ -152,9 +154,9 @@ class PanoptoDownloader:
         username = WebDriverWait(self.driver, 3).until(
             EC.presence_of_element_located((By.ID, 'username')))
         username.send_keys(self.username)
-        password = self.driver.find_element_by_xpath('//*[@id="Ecom_Password"]')
+        password = self.driver.find_element("xpath", '//*[@id="Ecom_Password"]')
         password.send_keys(self.password)
-        login_btn = self.driver.find_element_by_xpath('//*[@name="Log in"]')
+        login_btn = self.driver.find_element("xpath", '//*[@name="Log in"]')
         login_btn.click()
 
         # Wait for the redirect
@@ -255,9 +257,12 @@ class PanoptoDownloader:
             self.logger.info("Found module: %s", item['Name'])
 
             if item['SessionCount'] > 0:
-                result = {'key':    item['Id'],
-                          'videos': self.get_video_list(item['Id'])}
-                folders[item['Name']] = result
+                try:
+                    result = {'key':    item['Id'],
+                            'videos': self.get_video_list(item['Id'])}
+                    folders[item['Name']] = result
+                except:
+                    self.logger.debug(f"Error: \n{item}")
             else:
                 self.logger.debug("Module contains no videos, skipping...")
 
@@ -309,21 +314,30 @@ class PanoptoDownloader:
         # simple menu
         if not download_all:
             unwanted_folders = []
+            single_downloads = []
 
             for folder, videos in folders.items():
-                print("\nFolder <%s>:\n- l: list videos\n- y: download\n- n: don\'t download" %(folder))
+                print("\nFolder <%s>:\n- l: list videos\n- y: download\n- n: don\'t download\n- s: download single video" %(folder))
                 user_choice = ""
                 while user_choice == "":
-                    user_choice = input("(y/n/l) >> ").lower()
+                    user_choice = input("(y/n/l/s) >> ").lower()
                     if user_choice == "y":
                         break
-                    elif user_choice == "n":
+                    elif user_choice == "n" or len(user_choice) == 0:
                         unwanted_folders.append(folder)
                         break
                     elif user_choice == "l":
                         for video_title in videos["videos"]:
                             print("  - %s" %(video_title))
                         user_choice = ""
+                    elif user_choice == "s":
+                        for video_title in videos["videos"]:
+                            confirm = input("  - Download %s? (y/skip): " %(video_title))
+                            if confirm.lower() == "y":
+                                single_downloads.append((video_title, videos["videos"][video_title], folder))
+                                pass
+                        unwanted_folders.append(folder)
+                        break
                     else:
                         user_choice = ""
             
@@ -333,11 +347,13 @@ class PanoptoDownloader:
 
         with futures.ThreadPoolExecutor() as executor:
             future_threads = []
+            
+            keep_chars = (' ', '.', '_', '-')
+                
             for folder, videos in folders.items():
 
                 # Cardiff specific dumb file naming
                 fo_name = " ".join(folder.split(" ")[1:])
-                keep_chars = (' ', '.', '_', '-')
                 fo_name = "".join(c for c in fo_name if c.isalnum() or c in
                                   keep_chars).rstrip()
 
@@ -353,6 +369,26 @@ class PanoptoDownloader:
                                      keep_chars).rstrip()
 
                     f_name = os.path.join(folder_dir, f_name)
+                    f_name = "{}.mp4".format(f_name)
+
+                    future = executor.submit(self.download_video,
+                                             link, f_name)
+                    future_threads.append(future)
+                    
+            if len(single_downloads) > 0:
+                individual_folder_dir = os.path.join(self.cwd, "videos", "individual")
+                if not os.path.isdir(individual_folder_dir):
+                    os.makedirs(individual_folder_dir)
+                for name, link, folder in single_downloads:
+                    # Fix the name
+                    folder = folder.replace("/", "-")
+                    folder = "".join(c for c in folder if c.isalnum() or c in
+                                     keep_chars).rstrip()
+                    f_name = name.replace("/", "-")
+                    f_name = folder + "-" + "".join(c for c in f_name if c.isalnum() or c in
+                                     keep_chars).rstrip()
+
+                    f_name = os.path.join(individual_folder_dir, f_name)
                     f_name = "{}.mp4".format(f_name)
 
                     future = executor.submit(self.download_video,
@@ -401,7 +437,7 @@ def main(creds = "creds.txt"):
                 except:
                     pass
                 break
-            elif user_choice == "n":
+            elif user_choice == "n" or len(user_choice) < 1:
                 break
             else:
                 user_choice = ""
