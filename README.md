@@ -20,11 +20,13 @@ Downloads Cardiff university lectures from panopto
 - Run the building command -> python setup.py build
 - Splendid, but you still need a FireFox Browser installed, remember it -> https://www.mozilla.org/en-GB/firefox/new/
 
-**Use my pre-built windows version (run_downloader.exe) for your 64-bit machine:**
-- Download the repo as a zip or git clone it or download release **v2.1**
-- Unzip if needed, then open the **panopto_downloader_packed** folder
-- Double click **run_downloader.exe**
-- What, are you expecting more steps?
+~~**Use my pre-built windows version (run_downloader.exe) for your 64-bit machine:**~~
+~~- Download the repo as a zip or git clone it or download release **v2.1**~~
+~~- Unzip if needed, then open the **panopto_downloader_packed** folder~~
+~~- Double click **run_downloader.exe**~~
+~~- What, are you expecting more steps?~~
+
+The pre-built version is an older version without support for downloading single videos, but you can build it yourself.
 
 **How to run the source code:**
 - Install requirements from requirements.txt -> pip install -r requirements.txt
